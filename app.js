@@ -26,6 +26,7 @@ mongoose.connect(uri, {
   useUnifiedTopology: true,
 })
 const db = mongoose.connection
+db.on('error', console.error.bind(console, 'connection error:'))
 db.once('open', () => console.log('Connection to database successfull'))
 mongoose.set('useFindAndModify', false)
 
@@ -77,28 +78,36 @@ app.get('/compose', (req, res) => {
   res.render('compose')
 })
 
-app.get('/posts/:postName', (req, res) => {
-  const reqTitle = lowerCase(req.params.postName)
-
-  posts.forEach((post) => {
-    const storedTitle = lowerCase(post.title)
-
-    if (reqTitle === storedTitle) {
-      res.render('post', { postTitle: post.title, postBody: post.body })
-    }
-  })
-})
-
 // Handlers
 
-app.post('/', function (req, res) {
+app.post('/compose', (req, res) => {
   // Create New Post
   const post = new Post({
     title: req.body.postTitle,
     content: req.body.postBody,
   })
+  post.save((err) => {
+    if (err) {
+      console.log(err)
+    } else {
+      res.redirect('/')
+    }
+  })
+})
 
-  post.save((err, result) => res.redirect('/'))
+app.get('/posts/:postId', (req, res) => {
+  const reqPostId = req.params.postId
+
+  Post.findOne({ _id: reqPostId }, (err, post) => {
+    if (err) {
+      console.log(err)
+    } else {
+      res.render('post', {
+        title: post.title,
+        content: post.content,
+      })
+    }
+  })
 })
 
 //Listen to port
@@ -107,6 +116,4 @@ if (port == null || port == '') {
   port = 3000
 }
 
-app.listen(port, function () {
-  console.log('Server started successfully')
-})
+app.listen(port, () => console.log('Server started successfully'))
